@@ -100,7 +100,7 @@ Dataset sizes: S1 = 20 ep; S3v2 = 191 ep (real_left 20 + sim 171); S4v2 = 28 ep 
 - **Pilot pass rule:** final block position error ≤30 px, plus limits on frames with no block blob / multiple blobs; ≥4 of 6 pilot clips must pass.
 - **Generation:** image2world, prompt `"Pick_blue_block_and_put_it_gray_bowl. Simulation render."`, guidance 7, 35 sampling steps, 480×640, 185 output frames, autoregressive in 93-frame chunks with 1-frame overlap. 60 clips generated.
 - **IDM fine-tune:** the Step 2 IDM fine-tuned a further 10k steps, batch 32, lr 1e-4, cosine schedule, AdamW, on ~31k samples from 205 trajectories (real_left + sim right with sim joint labels; exact real/sim mix **undocumented**).
-- **QC:** 60 generated → 21 passed auto-QC → 20 after visual review (20 episodes / 7,400 frames). S4v2 policy used real_left 20 + 8 of these (28 ep); the 8 were chosen as clips with clean gripper open/close sequences (**inferred from the selection script, not documented**).
+- **QC:** 60 generated → 20 passed auto-QC (38 failed) → 21 after visual review (one false fail recovered) → 20 after a second review (20 episodes / 7,400 frames). S4v2 policy used real_left 20 + 8 of these (28 ep); the 8 were chosen as clips with clean gripper open/close sequences (**inferred from the selection script, not documented**).
 - **Label fixes:** the label start is anchored to the real start state and blended into the IDM labels over 16 frames; the gripper is snapped to the real open/closed levels (37.18° / 1.67°) with hysteresis.
 - **Result:** S4v2 never turned right (0/2). Right clips covered only 6 of 20 spots, pan −28° to −51° vs. −28° to −79° needed.
 
@@ -109,7 +109,7 @@ Dataset sizes: S1 = 20 ep; S3v2 = 191 ep (real_left 20 + sim 171); S4v2 = 28 ep 
 ![Step 4 Predict clip reaching right](images/predict/step4_predict_contact_sheet_reaches_right.jpg)
 *Frame sheet of one Step 4 clip from the re-post-trained Predict: the arm turns right to the block, carries it and drops it in the bowl. Before re-post-training on sim right clips, Predict videos kept moving the arm over the bowl/left side instead (wrong direction).*
 
-Known Step 4 failure (no image here): long clips are generated in 93-frame chunks, and near a chunk join a second blue block can appear and be picked again (block duplication). In the 60-clip run most auto-QC failures (38) were duplication.
+Known Step 4 failure (no image here): long clips are generated in 93-frame chunks, and near a chunk join a second blue block can appear and be picked again (block duplication). In the 60-clip run 20 passed and 38 failed auto-QC, mostly for duplication.
 
 ## Step 5 — Cosmos Transfer 2.5 of sim episodes
 
