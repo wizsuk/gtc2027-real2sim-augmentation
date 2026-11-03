@@ -51,6 +51,10 @@ These are informal runs with a person resetting the block between tries. The con
 - [figures/poster.png](figures/poster.png) — poster
 - [figures/](figures/) — MimicGen paths, sim vs. Transfer, Predict post-trained frames, real-robot stills
 
+## Image gallery
+
+Real workspace, NuRec/Isaac Sim views, Cosmos Predict and Transfer success/failure examples and frame grids: see the "What it looks like" sections in [RECIPE.md](RECIPE.md) and [images/](images/).
+
 ## Hardware
 
 NVIDIA RTX PRO 6000, NVIDIA RTX 5090, NVIDIA DGX Spark (GB10).
