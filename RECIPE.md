@@ -66,7 +66,7 @@ Dataset sizes: S1 = 20 ep; S3v2 = 191 ep (real_left 20 + sim 171); S4v2 = 28 ep 
 ## Step 3 — Isaac Sim + NuRec, MimicGen
 
 - **Scene:** NuRec 3DGS (3DGUT) background of the 3D-printed workspace; COLMAP → 3DGUT (MCMC) → USDZ → Isaac Sim 6.0.1. Camera re-calibrated to the real one.
-- **Replay gate:** real_left 20 replayed in sim with joint values. Block placed at the center of the open jaw gap ("gapc"): 19/20 lift. The 19 passing demos are the MimicGen seeds.
+- **Replay gate:** real_left 20 replayed in sim with joint values. Block placed at the center of the open jaw gap: 19/20 lift. The 19 passing demos are the MimicGen seeds.
 - **Generation:** 19 seed demos × 20 right spots = 380 attempts. Grasp segment transformed relative to the block; place segment follows the bowl; inside 75 mm of the bowl the gripper stays ≥63 mm above the table.
 - **QC (keep rule):** block inside bowl on release, rotation ≤10°, position ≤8 mm, bowl moved <10 mm and tilted <10°. **211/380 kept (55.5%).**
 - **Render:** 211 episodes re-rendered from recorded states (front camera); frame 0 dropped and labels shifted by one frame.
@@ -111,7 +111,7 @@ Known Step 4 failure (no image here): long clips are generated in 93-frame chunk
 ## Step 5 — Cosmos Transfer 2.5 of sim episodes
 
 - **Input:** Step 3 sim right episodes (front, 10 fps) + edge control.
-- **Settings (adopted "v5w"):** Cosmos Transfer 2.5 (2B, distilled), edge control only, strength 1.0; 720p; 4 steps; guidance 3; seed 2025. Prompt describes the real scene with a "plain white desk" / "smooth plain matte white" surface (replacing a wooden-desk wording). Full prompt text: **TBD**.
+- **Settings (adopted):** Cosmos Transfer 2.5 (2B, distilled), edge control only, strength 1.0; 720p; 4 steps; guidance 3; seed 2025. Prompt describes the real scene with a "plain white desk" / "smooth plain matte white" surface (replacing a wooden-desk wording). Full prompt text: **TBD**.
 - **Pilot QC (3 clips):** block IoU 0.85 / 0.89 / 0.80, block center error 1–2 px.
 - **Bulk:** 211 transferred → **171 pass QC** / 40 fail. Long clips truncated at 93 frames; labels 1:1 with sim.
 - **Labels:** sim ground-truth joints (no IDM).
