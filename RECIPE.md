@@ -9,7 +9,7 @@ Settings per step, taken from the project notes and the actual training/generati
 | Task | Pick up the blue block and put it in the gray bowl |
 | Success criterion | Block is inside the bowl when the gripper opens |
 | Robot | SO-101 arm (5-DoF + gripper) |
-| Camera | One front camera, 640×480 (policy uses front camera only). Frame rate: 15 fps per poster draft; Step 1 notes list 30 fps — **TBD (to reconcile)** |
+| Camera | One front camera, 640×480 (policy uses front camera only). Frame rate: 30 fps (all π0.5 training datasets) |
 | Real data | 20 real demonstrations, all with the block on the **left**, LeRobot format (20 episodes / 8,993 frames). Never extended. |
 | Right-side spots | 20 fixed spots (R00–R19), mirrored from the left demos and moved until IK passes (position ≤2 mm, rotation ≤10°); 32 mm spacing, within 0.306 m of the base, outside 90 mm of the bowl. Used for Steps 2–5. |
 
