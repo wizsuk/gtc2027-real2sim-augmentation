@@ -9,7 +9,7 @@ Settings per step, taken from the project notes and the actual training/generati
 | Task | Pick up the blue block and put it in the gray bowl |
 | Success criterion | Block is inside the bowl when the gripper opens |
 | Robot | SO-101 arm (5-DoF + gripper) |
-| Camera | One front camera, 640×480 (policy uses front camera only). Frame rate: 30 fps (all π0.5 training datasets) |
+| Camera | One front camera, 640×480 (policy uses front camera only). Frame rate: policy (π0.5) datasets 30 fps; raw capture used as Predict/IDM input 15 fps |
 | Real data | 20 real demonstrations, all with the block on the **left**, LeRobot format (20 episodes / 8,993 frames). Never extended. |
 | Right-side spots | 20 fixed spots (R00–R19), mirrored from the left demos and moved until IK passes (position ≤2 mm, rotation ≤10°); 32 mm spacing, within 0.306 m of the base, outside 90 mm of the bowl. Used for Steps 2–5. |
 
@@ -46,10 +46,11 @@ Dataset sizes: S1 = 20 ep; S3v2 = 191 ep (real_left 20 + sim 171); S4v2 = 28 ep 
 
 ## Step 2 — Cosmos Predict 2.5 + IDM
 
-- **Predict post-training:** Cosmos Predict 2.5 (2B) post-trained on our robot/camera/table video (real_left only). Generation used the iteration-3000 weights. Clip count, resolution and prompt for this post-training: **TBD**.
+- **Predict post-training:** Cosmos Predict 2.5 2B video2world, full fine-tune (no LoRA), on 23 real_left clips (5,701 frames, 640×480, 93-frame windows; content 15 fps, labelled 16 fps). Prompt `"Pick_blue_block_and_put_it_gray_bowl"`, batch 1, lr 2^-14.5 (≈4.3e-5), warmup 1000, 6000 iterations. Generation for the 60 right-spot clips used the iteration-3000 weights.
 - **Conditioning:** first front frame of each real left demo with the block removed and re-composited at each of the 20 right spots (with measured shadow).
 - **Generation:** 20 right spots × 3 seeds = 60 clips.
-- **IDM labeling:** IDM trained on real_left 20 only (video → joint values). IDM architecture/steps: **TBD**.
+- **IDM labeling:** IDM trained on real_left 20 only (video → joint values). 
+- **IDM (architecture):** GR00T-Dreams IDM: SigLIP2-L/16-256 vision encoder (fine-tuned), 4 self-attention layers, 8-layer flow-matching DiT action head (1024 hidden, 16 heads), 16-step action chunks. Initialized from the public SO-100 IDM and fine-tuned on the 20 real left episodes (15 fps, front camera) for 20k steps.
 - **Result:** IDM shoulder_pan never went below −7.5°, while IK needs −18° to −66°; 38/60 clips never reached the block. No π0.5 training for Step 2 on the right-side clips (decision: hold).
 
 ### What it looks like
@@ -71,7 +72,7 @@ Dataset sizes: S1 = 20 ep; S3v2 = 191 ep (real_left 20 + sim 171); S4v2 = 28 ep 
 - **QC (keep rule):** block inside bowl on release, rotation ≤10°, position ≤8 mm, bowl moved <10 mm and tilted <10°. **211/380 kept (55.5%).**
 - **Render:** 211 episodes re-rendered from recorded states (front camera); frame 0 dropped and labels shifted by one frame.
 - **Labels:** sim ground-truth joints (no IDM).
-- **π0.5 training (S3v2):** real_left 20 + sim 171 = 191 ep. Why 171 of the 211 were used: **TBD**.
+- **π0.5 training (S3v2):** real_left 20 + sim 171 = 191 ep. The 171 are the sim episodes whose Cosmos Transfer outputs (Step 5) passed auto-QC; 40 of 211 were excluded. S3v2 trains on the **raw sim renders** of these 171 (frame 0 dropped); S5 trains on their Transfer outputs.
 
 ### What it looks like (Step 3)
 
@@ -95,10 +96,12 @@ Dataset sizes: S1 = 20 ep; S3v2 = 191 ep (real_left 20 + sim 171); S4v2 = 28 ep 
 
 ## Step 4 — Predict re-post-trained on real + sim right, sim-fine-tuned IDM
 
-- **Predict post-training:** Cosmos Predict 2.5 (2B) video2world, from base, on **103 clips** = 23 real_left clips + 80 Step 3 sim right clips (front, 640×480). Resolution 480 (480×640), 93 frames per clip, batch size 1, max 4000 iterations, save every 500; generation used the **iteration-3500** weights (pilot 5/6 pass vs. 3/6 at iter 4000).
+- **Predict post-training:** Cosmos Predict 2.5 (2B) video2world, from base, on **103 clips** = 23 real_left clips + 80 Step 3 sim right clips (front, 640×480). Same recipe as Step 2 (full fine-tune, batch 1, lr 2^-14.5, warmup 1000), 480×640, 93 frames per clip, trained to 4000 iterations, saved every 500; generation used the **iteration-3500** weights (pilot 5/6 pass vs. 3/6 at 4000). Prompt gets the suffix "Simulation render.". The 23 real / 80 sim split is as named in the dataset; the split itself was **not verified**.
+- **Pilot pass rule:** final block position error ≤30 px, plus limits on frames with no block blob / multiple blobs; ≥4 of 6 pilot clips must pass.
 - **Generation:** image2world, prompt `"Pick_blue_block_and_put_it_gray_bowl. Simulation render."`, guidance 7, 35 sampling steps, 480×640, 185 output frames, autoregressive in 93-frame chunks with 1-frame overlap. 60 clips generated.
-- **IDM fine-tune:** IDM fine-tuned on real_left 20 + sim right episodes (sim joint labels). Exact steps/LR: **TBD**.
-- **QC:** automatic QC + visual check → 20 episodes / 7,400 frames (S4 dataset). S4v2 policy used real_left 20 + 8 right clips (28 ep); how the 8 were chosen from the 20: **TBD**.
+- **IDM fine-tune:** the Step 2 IDM fine-tuned a further 10k steps, batch 32, lr 1e-4, cosine schedule, AdamW, on ~31k samples from 205 trajectories (real_left + sim right with sim joint labels; exact real/sim mix **undocumented**).
+- **QC:** 60 generated → 21 passed auto-QC → 20 after visual review (20 episodes / 7,400 frames). S4v2 policy used real_left 20 + 8 of these (28 ep); the 8 were chosen as clips with clean gripper open/close sequences (**inferred from the selection script, not documented**).
+- **Label fixes:** the label start is anchored to the real start state and blended into the IDM labels over 16 frames; the gripper is snapped to the real open/closed levels (37.18° / 1.67°) with hysteresis.
 - **Result:** S4v2 never turned right (0/2). Right clips covered only 6 of 20 spots, pan −28° to −51° vs. −28° to −79° needed.
 
 ### What it looks like
@@ -106,13 +109,15 @@ Dataset sizes: S1 = 20 ep; S3v2 = 191 ep (real_left 20 + sim 171); S4v2 = 28 ep 
 ![Step 4 Predict clip reaching right](images/predict/step4_predict_contact_sheet_reaches_right.jpg)
 *Frame sheet of one Step 4 clip from the re-post-trained Predict: the arm turns right to the block, carries it and drops it in the bowl. Before re-post-training on sim right clips, Predict videos kept moving the arm over the bowl/left side instead (wrong direction).*
 
-Known Step 4 failure (no image here): long clips are generated in 93-frame chunks, and near a chunk join a second blue block can appear and be picked again (block duplication). In the 60-clip run, automatic QC passed 20 and failed 38, mostly for duplication.
+Known Step 4 failure (no image here): long clips are generated in 93-frame chunks, and near a chunk join a second blue block can appear and be picked again (block duplication). In the 60-clip run most auto-QC failures (38) were duplication.
 
 ## Step 5 — Cosmos Transfer 2.5 of sim episodes
 
 - **Input:** Step 3 sim right episodes (front, 10 fps) + edge control.
-- **Settings (adopted):** Cosmos Transfer 2.5 (2B, distilled), edge control only, strength 1.0; 720p; 4 steps; guidance 3; seed 2025. Prompt describes the real scene with a "plain white desk" / "smooth plain matte white" surface (replacing a wooden-desk wording). Full prompt text: **TBD**.
+- **Settings (adopted):** Cosmos Transfer 2.5 (2B), edge control only, weight 1.0; 720p; 4 steps; guidance 3; seed 2025. Checkpoint variant **unconfirmed** (4 steps suggests the distilled one).
+- **Prompt:** "A green robotic arm with a black gripper picks up a blue block next to a gray bowl on a plain white desk. The blue block and the gray bowl keep their exact shape and color; only the desk surface is changed to smooth plain matte white." (read from one episode spec; **assumed** identical for all episodes).
 - **Pilot QC (3 clips):** block IoU 0.85 / 0.89 / 0.80, block center error 1–2 px.
+- **Auto-QC rule:** block IoU ≥0.6, block center error ≤8 px, block detection ≥90% of frames, arm IoU ≥0.85, arm green fraction ≥0.6, brightness 120–175.
 - **Bulk:** 211 transferred → **171 pass QC** / 40 fail. Long clips truncated at 93 frames; labels 1:1 with sim.
 - **Labels:** sim ground-truth joints (no IDM).
 - **π0.5 training (S5):** real_left 20 + 171 = 191 ep.
