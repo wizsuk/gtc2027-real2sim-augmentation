@@ -1,6 +1,6 @@
 # Position Generalization from ~20 Real Demonstrations: A Pre-Registered Real-Robot Comparison of Cosmos Predict, Cosmos Transfer, and Isaac Sim + NuRec (3DGS) Augmentation
 
-**Logan Lee, Megazone Cloud** · NVIDIA GTC 2027 poster companion repository
+**Logan (Jae Suk) Lee, Megazone** · NVIDIA GTC 2027 poster companion repository
 
 ## Abstract
 
